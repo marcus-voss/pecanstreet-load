@@ -30,6 +30,9 @@ tzs = {
        "austin"  : pytz.timezone("US/Central")
        }
 
+# dirty ids
+dirty = [8282]
+
 # create database connection and queries
 # exchange XXXX:XXXXX with authentication 
 engine = create_engine('postgresql://XXXXXXX:XXXXXX@dataport.pecanstreet.org:5434/postgres')
@@ -49,8 +52,7 @@ meta_df = meta_df[(meta_df.egauge_max_time >= end_date) & (meta_df.egauge_min_ti
 meta_df = meta_df.set_index(meta_df.dataid)
 ids = {}
 for l in locations:
-    ids[l] = meta_df[(meta_df.use == "yes") & (meta_df.city.str.lower() == l)].dataid.tolist()
-    shuffle(ids[l])
+    ids[l] = meta_df[(meta_df.use == "yes") & (meta_df.city.str.lower() == l) & (~meta_df.dataid.isin(dirty))].dataid.tolist()
     print("There are %d households in %s" % (len(ids[l]), l))
 
 # get the load data
@@ -100,7 +102,6 @@ for f in freqs:
             os.makedirs(pickle_path)
         
         df.to_csv(csv_path + "/%s_%s_load.csv" % (l, f), float_format='%.3f')
-        df.to_pickle(pickle_path + "/%s_%s_load.p" % (l, f))
         
         # produce higher aggregations as available
         for s in sizes:
