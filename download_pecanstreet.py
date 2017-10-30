@@ -31,7 +31,7 @@ tzs = {
        }
 
 # dirty ids
-dirty = [8282]
+dirty = [8282, 2365]
 
 # create database connection and queries
 # exchange XXXX:XXXXX with authentication 
@@ -112,8 +112,7 @@ for f in freqs:
                 counter += 1
             if agg.shape[1] > 0:
                 agg.to_csv(csv_path + "/%s_%s_load_agg_%s.csv" %  (l, f, s), float_format='%.3f')
-                agg.to_pickle(pickle_path + "/%s_%s_load_agg_%s.p" % (l, f, s))
-
+   
 
 # query the weather data, converting fahrenheit to celsius
 weather_query = "select localhour, (temperature - 32) /  1.8 as temperature, (apparent_temperature - 32) /  1.8 as apparent_temperature, dew_point, humidity, visibility, pressure, wind_speed, cloud_cover, wind_bearing, precip_intensity, precip_probability from university.weather where localhour >= \'%s\' and localhour < \'%s\' and latitude = %f order by localhour"
@@ -136,4 +135,3 @@ for l in locations:
     
     # store
     weather.to_csv("./csv/" + l + "/%s_weather.csv" % (l), float_format='%.2f')
-    weather.to_pickle("./pickle/" + l + "/%s_weather.p" % (l))
