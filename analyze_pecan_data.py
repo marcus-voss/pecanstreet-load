@@ -24,24 +24,30 @@ weekdayFormat = mdates.DateFormatter('%a')
 dateFormat = mdates.DateFormatter('%y-%m-%d')
 
 # set plot properties
-def style_plot():
+def style_plots():
     plt.tight_layout()
     plt.style.use("seaborn-white")
     sns.set(style="white")
     sns.despine(left=True)
 
+def read_csv(path, tz="UTC", freq="H"):
+    df = pd.read_csv(path, index_col=0, parse_dates=True)
+    df.index = df.index.tz_localize("UTC").tz_convert(tz)
+    df = df.reindex(index=pd.date_range(df.index[0], df.index[-1], freq=freq, tz=tz))
+    return df
 
+style_plots()
 for city in cities:
-    weather = pd.read_pickle("pickle/" + city + "/%s_weather.p" % city.lower())  
-    path = "pickle/" + city + "/H/"
+    weather = read_csv("csv/" + city.lower() + "/%s_weather.csv" % city.lower(), tz=tz[city], freq = "H")  
+    path = "csv/" + city.lower() + "/H/"
     for f in os.listdir(path):
-        load = pd.read_pickle(path + "/" + f)
+        load = read_csv(path + "/" + f, tz=tz[city], freq="H")
         # read the aggregation level
         if "_agg_" in f:
-            s = int(f.split("_agg_")[1].replace(".p", ""))
+            s = int(f.split("_agg_")[1].replace(".csv", ""))
         else:
             s = 1
-               
+             
         #iterate over households or aggregations
         for h in load:
             # join load and weather
@@ -61,9 +67,9 @@ for city in cities:
             plt.ylabel('kW')
             ax.xaxis.set_major_formatter(dateFormat)
             ax.xaxis.set_minor_formatter(weekdayFormat)
-            # ax.fmt_xdata = mdates.DateFormatter('%a')
-            style_plot()
             plt.savefig(out_path + "/week" + str(h) + "." + fformat, format=fformat, pad_inches=0.0, bbox_inches='tight')
+            plt.cla()
+            plt.close(fig)
 
             # ACF / PACF
             fig, ax = plt.subplots(1, figsize=(16, 4))
@@ -76,11 +82,13 @@ for city in cities:
             ax.set_xlim((0, 180))
             ax.xaxis.set_ticks([24, 48, 72, 96, 120, 144, 168])
             ax.legend()
-            style_plot()
             plt.savefig(out_path + "/acf" + str(h) + "." + fformat, format=fformat, pad_inches=0.0, bbox_inches='tight')
+            plt.cla()
+            plt.close(fig)
 
             # correlation with temp
             fig, ax = plt.subplots(1, figsize=(16, 4))
             sns.lmplot(x='temperature',y='active_power',data=df, scatter_kws={"s": 10})
-            style_plot()
             plt.savefig(out_path + "/correlation" + str(h) + "." + fformat, format=fformat, pad_inches=0.0, bbox_inches='tight')
+            plt.cla()
+            plt.close(fig)

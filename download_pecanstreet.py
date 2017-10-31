@@ -5,7 +5,7 @@ import pandas as pd
 import pytz
 import sys
 from datetime import datetime
-from sqlalchemy import create_engine  # worked using the win.exe file from homepage and easy_install
+from sqlalchemy import create_engine
 import os
 
 seed( 42 ) # seed for random shuffling to groups
@@ -67,13 +67,12 @@ for f in freqs:
                 # query the data the data
                 load = pd.read_sql_query(queries[f] % (start_date, end_date, id), con=engine)
                 load["time"] = load.iloc[:, 0]
-                
+                load["time"] = pd.to_datetime(load["time"])
+                load = load.set_index(load["time"])
                 # it is localtime so localize it correctly
-                load["time"] = pd.to_datetime(load["time"], utc=True)
-                load["time"] = load["time"].apply(lambda x: tzs[l].localize(x).astimezone(tzs[l]))
+                load.index = load.index.tz_localize(tzs[l], ambiguous='infer')
                 
                 # make it index
-                load = load.set_index(load["time"])
                 load.drop(['time'], 1, inplace=True)  # is already index              
                 load = load[~load.index.duplicated(keep='first')] # handle their stupid handling of summertime
             except Exception as e:
@@ -95,11 +94,8 @@ for f in freqs:
         print("Had to drop for %s and %s: %d" % (f, l, before - df.shape[1]))
         
         csv_path = "./csv/" + l + "/" + f
-        pickle_path = "./pickle/" + l + "/" + f
         if not os.path.exists(csv_path):
             os.makedirs(csv_path)
-        if not os.path.exists(pickle_path):
-            os.makedirs(pickle_path)
         
         df.to_csv(csv_path + "/%s_%s_load.csv" % (l, f), float_format='%.3f')
         
@@ -122,10 +118,10 @@ for l in locations:
     weather = pd.read_sql_query(weather_query % (start_date, end_date, latitudes[l]), con=engine)
     
     # make proper timeindex 
-    weather["time"] = pd.to_datetime(weather["localhour"], utc=True)
-    weather["time"] = weather["time"].apply(lambda x: utc.localize(x).astimezone(tzs[l]))
-    weather = weather.set_index(weather["time"])
-    weather = weather.drop(["time", "localhour"], axis=1)
+    weather["localhour"] = pd.to_datetime(weather["localhour"], utc=True)
+    weather = weather.set_index(weather["localhour"])
+    weather.index = weather.index.tz_localize("utc").tz_convert(tzs[l])
+    weather = weather.drop(["localhour"], axis=1)
     weather = weather[~weather.index.duplicated(keep='first')]
     weather = weather.reindex(index) # to handle their stupdid summer time handling
     weather = weather.interpolate(limit=3) # small holes

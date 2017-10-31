@@ -2,11 +2,34 @@
 
 The provided scripts can be used to download and exploratively analyze the Dataport Pecan Street dataset. The data is provided by Dataport and Pecan Street Inc., and a key to access the data must be obtained from [https://dataport.cloud/](https://dataport.cloud/ "datapart").
 
+## Python setup
+
+To run the scripts successfully it is remommented to use anaconda to recreate the environment, as there have been issues with different version of the DB drivers. 
+
+See [here](https://conda.io/docs/user-guide/tasks/manage-environments.html), for more information about anaconda environments.
+
+Run the following command after installing anaconda:
+
+    conda env create -f environment.yml
+
+Then use either of the following commands to activate the environment:
+
+On Windows:
+
+	activate pecanstreet 
+
+On Linux:
+
+	source activate pecanstreet 
+
+Then, run the following scripts within the environment.
+	
+
 ## download\_pecanstreet.py
 
 The script is currently setup to download the data for 2 years (2015-2016) for Boulder and Austin (the largest cities with available data) and also downloads the associated weather data. It fills holes of 3 hours by linear interpolation and holes larger than 3 hours to up a day by using the values of 24 hours before. If still N/A values are existing, the ID is dropped from the final results (resulting in 200 households for Austin and 20 households for Boulder). 
 
-Resulting files output in *.csv format and as pickled Pandas dataframes (readable for Python 3). 
+Resulting files output in *.csv format. 
 
 Datetime format is YYYY-MM-DD hh:mm:ss±hh:mm, where the part "±hh:mm" is the offset of UTC, hence the time is local time.
 
