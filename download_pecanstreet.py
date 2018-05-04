@@ -7,6 +7,9 @@ import sys
 from datetime import datetime
 from sqlalchemy import create_engine
 import os
+import json
+import requests
+
 
 seed( 42 ) # seed for random shuffling to groups
 
@@ -14,8 +17,9 @@ seed( 42 ) # seed for random shuffling to groups
 start_date = "2015-01-01"
 end_date = "2017-01-01"
 
-freqs = ["15min", "H"]
+freqs = ["15min"]
 locations = ["austin", "boulder"]
+#locations = ["boulder"]
 
 latitudes = {"austin": 30.292432,       # (30.292432,-97.699662)
              "boulder" : 40.027278      # (40.027278,-105.256111)
@@ -36,6 +40,7 @@ dirty = [8282, 2365]
 # create database connection and queries
 # exchange XXXX:XXXXX with authentication 
 engine = create_engine('postgresql://XXXXXXX:XXXXXX@dataport.pecanstreet.org:5434/postgres')
+
 queries= {
         "15min" : "SELECT local_15min, use FROM university.electricity_egauge_15min WHERE local_15min >= \'%s\' and local_15min < \'%s\' and dataid=%s order by local_15min",
         "H"     : "SELECT to_char(localhour, 'MM-DD-YYYY HH24:MI:SS') as time, use FROM university.electricity_egauge_hours WHERE localhour >= \'%s\' and localhour < \'%s\' and dataid=%s order by localhour"
@@ -70,7 +75,8 @@ for f in freqs:
                 load["time"] = pd.to_datetime(load["time"])
                 load = load.set_index(load["time"])
                 # it is localtime so localize it correctly
-                load.index = load.index.tz_localize(tzs[l], ambiguous='infer')
+                #load.index = load.index.tz_localize(tzs[l], ambiguous='infer')
+                load.index = load.index.tz_localize(tzs[l], ambiguous='NaT')
                 
                 # make it index
                 load.drop(['time'], 1, inplace=True)  # is already index              
@@ -131,3 +137,25 @@ for l in locations:
     
     # store
     weather.to_csv("./csv/" + l + "/%s_weather.csv" % (l), float_format='%.2f')
+
+# query holiday data
+for l in locations:
+    index = pd.date_range(start=tzs[l].localize(datetime.strptime(start_date, "%Y-%m-%d")), end=tzs[l].localize(datetime.strptime(end_date, "%Y-%m-%d")), freq="H", tz=tzs[l], closed="left")
+    holidays = []
+    URL = 'https://holidayapi.com/v1/holidays?'
+    KEY = '35156152-ea67-4b0e-b919-4aa2a32ab680'
+
+    for year in index.year.unique():
+        parameters = {
+            # Required
+            'key' : KEY,
+            'country': 'US',
+            'year':    year,
+            'public':   True,
+        }
+        response = requests.get(URL, params=parameters);
+        data     = json.loads(response.text)
+        holidays.extend(list(data['holidays'].keys()))
+    
+    with open("./csv/" + l + "/%s_holidays.json" % l, 'w') as outfile:
+        json.dump(holidays, outfile)  
